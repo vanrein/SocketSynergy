@@ -1,0 +1,112 @@
+No.     Time        Source                Destination           Protocol Info
+      1 0.000000    2001:db8:420a:1::11   2001:db8:420a:1::5    TCP      distinct > cbt [SYN] Seq=0 Win=0 Len=0
+
+Frame 1 (74 bytes on wire, 74 bytes captured)
+    Arrival Time: Feb 17, 2011 17:24:02.891902000
+    [Time delta from previous captured frame: 0.000000000 seconds]
+    [Time delta from previous displayed frame: 0.000000000 seconds]
+    [Time since reference or first frame: 0.000000000 seconds]
+    Frame Number: 1
+    Frame Length: 74 bytes
+    Capture Length: 74 bytes
+    [Frame is marked: False]
+    [Protocols in frame: eth:ipv6:tcp]
+    [Coloring Rule Name: TCP SYN/FIN]
+    [Coloring Rule String: tcp.flags & 0x02 || tcp.flags.fin == 1]
+Ethernet II, Src: ViaTechn_c5:7b:0b (00:40:63:c5:7b:0b), Dst: Compulab_04:48:87 (00:01:c0:04:48:87)
+    Destination: Compulab_04:48:87 (00:01:c0:04:48:87)
+        Address: Compulab_04:48:87 (00:01:c0:04:48:87)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+    Source: ViaTechn_c5:7b:0b (00:40:63:c5:7b:0b)
+        Address: ViaTechn_c5:7b:0b (00:40:63:c5:7b:0b)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+    Type: IPv6 (0x86dd)
+Internet Protocol Version 6
+    0110 .... = Version: 6
+        [0110 .... = This field makes the filter "ip.version == 6" possible: 6]
+    .... 0000 0000 .... .... .... .... .... = Traffic class: 0x00000000
+    .... .... .... 0000 0000 0000 0000 0000 = Flowlabel: 0x00000000
+    Payload length: 20
+    Next header: TCP (0x06)
+    Hop limit: 3
+    Source: 2001:db8:420a:1::11 (2001:db8:420a:1::11)
+    Destination: 2001:db8:420a:1::5 (2001:db8:420a:1::5)
+Transmission Control Protocol, Src Port: distinct (9999), Dst Port: cbt (7777), Seq: 0, Len: 0
+    Source port: distinct (9999)
+    Destination port: cbt (7777)
+    [Stream index: 0]
+    Sequence number: 0    (relative sequence number)
+    Header length: 20 bytes
+    Flags: 0x02 (SYN)
+        0... .... = Congestion Window Reduced (CWR): Not set
+        .0.. .... = ECN-Echo: Not set
+        ..0. .... = Urgent: Not set
+        ...0 .... = Acknowledgement: Not set
+        .... 0... = Push: Not set
+        .... .0.. = Reset: Not set
+        .... ..1. = Syn: Set
+            [Expert Info (Chat/Sequence): Connection establish request (SYN): server port cbt]
+                [Message: Connection establish request (SYN): server port cbt]
+                [Severity level: Chat]
+                [Group: Sequence]
+        .... ...0 = Fin: Not set
+    Window size: 0
+    Checksum: 0x0000 [validation disabled]
+        [Good Checksum: False]
+        [Bad Checksum: False]
+
+0000  00 01 c0 04 48 87 00 40 63 c5 7b 0b 86 dd 60 00   ....H..@c.{...`.
+0010  00 00 00 14 06 03 20 01 0d b8 42 0a 00 01 00 00   ...... ...B.....
+0020  00 00 00 00 00 11 20 01 0d b8 42 0a 00 01 00 00   ...... ...B.....
+0030  00 00 00 00 00 05 27 0f 1e 61 00 00 00 00 00 00   ......'..a......
+0040  00 00 50 02 00 00 00 00 00 00                     ..P.......
+No.     Time        Source                Destination           Protocol Info
+      2 2.235004    2001:db8:420a:1::11   2001:db8:420a:1::5    UDP      Source port: distinct  Destination port: cbt
+
+Frame 2 (70 bytes on wire, 70 bytes captured)
+    Arrival Time: Feb 17, 2011 17:24:05.126906000
+    [Time delta from previous captured frame: 2.235004000 seconds]
+    [Time delta from previous displayed frame: 2.235004000 seconds]
+    [Time since reference or first frame: 2.235004000 seconds]
+    Frame Number: 2
+    Frame Length: 70 bytes
+    Capture Length: 70 bytes
+    [Frame is marked: False]
+    [Protocols in frame: eth:ipv6:udp:mp2t]
+    [Coloring Rule Name: UDP]
+    [Coloring Rule String: udp]
+Ethernet II, Src: ViaTechn_c5:7b:0b (00:40:63:c5:7b:0b), Dst: Compulab_04:48:87 (00:01:c0:04:48:87)
+    Destination: Compulab_04:48:87 (00:01:c0:04:48:87)
+        Address: Compulab_04:48:87 (00:01:c0:04:48:87)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+    Source: ViaTechn_c5:7b:0b (00:40:63:c5:7b:0b)
+        Address: ViaTechn_c5:7b:0b (00:40:63:c5:7b:0b)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+    Type: IPv6 (0x86dd)
+Internet Protocol Version 6
+    0110 .... = Version: 6
+        [0110 .... = This field makes the filter "ip.version == 6" possible: 6]
+    .... 0000 0000 .... .... .... .... .... = Traffic class: 0x00000000
+    .... .... .... 0000 0000 0000 0000 0000 = Flowlabel: 0x00000000
+    Payload length: 16
+    Next header: UDP (0x11)
+    Hop limit: 3
+    Source: 2001:db8:420a:1::11 (2001:db8:420a:1::11)
+    Destination: 2001:db8:420a:1::5 (2001:db8:420a:1::5)
+User Datagram Protocol, Src Port: distinct (9999), Dst Port: cbt (7777)
+    Source port: distinct (9999)
+    Destination port: cbt (7777)
+    Length: 8
+    Checksum: 0x0000 (none)
+        Good Checksum: False
+        Bad Checksum: False
+
+0000  00 01 c0 04 48 87 00 40 63 c5 7b 0b 86 dd 60 00   ....H..@c.{...`.
+0010  00 00 00 10 11 03 20 01 0d b8 42 0a 00 01 00 00   ...... ...B.....
+0020  00 00 00 00 00 11 20 01 0d b8 42 0a 00 01 00 00   ...... ...B.....
+0030  00 00 00 00 00 05 27 0f 1e 61 00 08 00 00 00 00   ......'..a......
+0040  00 00 00 00 00 00                                 ......

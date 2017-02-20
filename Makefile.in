@@ -1,0 +1,14 @@
+all: Makefile libsynergy.so listendemo
+
+Makefile: Makefile.in
+	@echo Please run ./configure before make
+	@exit 1
+
+libsynergy.so: synergy.c
+	gcc -ggdb3 -c -o "$@" -shared "$<"
+
+listendemo: listendemo.c libsynergy.so
+	gcc -ggdb3 -o "$@" "$<" libsynergy.so
+
+clean:
+	rm -f listendemo libsynergy.so
