@@ -5,7 +5,7 @@
  * protect it against attacks.
  * 
  * Parameters:
- *  1. The word "udp" or "tcp to signify the protocol to use
+ *  1. The word "sctp", "tcp" or "udp" to signify the protocol to use
  *  2. The listening IPv6 address
  *  3. The listening port
  *  4. The remote IPv6 address that will connect
@@ -37,6 +37,7 @@
  * Global variables
  */
 int cnxtp;
+int proto;
 struct sockaddr_in6 local, remot;
 int hoplimit = 3;
 
@@ -52,15 +53,20 @@ int main (int argc, char *argv []) {
 	//
 	// Parse parameters
 	if (argc != 7) {
-		fprintf (stderr, "Usage: %s tcp|udp local-addr local-port remote-addr remote-port hoplimit\n", argv [0]);
+		fprintf (stderr, "Usage: %s sctp|tcp|udp local-addr local-port remote-addr remote-port hoplimit\n", argv [0]);
 		exit (1);
 	}
-	if (strcmp (argv [1], "tcp") == 0) {
+	if (strcmp (argv [1], "sctp") == 0) {
+		cnxtp = SOCK_SEQPACKET;
+		proto = IPPROTO_SCTP;
+	} else if (strcmp (argv [1], "tcp") == 0) {
 		cnxtp = SOCK_STREAM;
+		proto = 0;
 	} else if (strcmp (argv [1], "udp") == 0) {
 		cnxtp = SOCK_DGRAM;
+		proto = 0;
 	} else {
-		fprintf (stderr, "%s: First parameter should be tcp or udp, not '%s'\n",
+		fprintf (stderr, "%s: First parameter should be sctp, tcp or udp, not '%s'\n",
 				argv [0], argv [1]);
 		exit (1);
 	}
@@ -99,16 +105,8 @@ int main (int argc, char *argv []) {
 	}
 
 	//
-	// RAW sockets require root access -- check if that is ok
-	if (getuid ()) {
-		fprintf (stderr, "%s: Root access is needed to request synergy\n",
-				argv [0]);
-		exit (1);
-	}
-
-	//
 	// Setup the socket for TCP or UDP over IPv6
-	int sox = socket (PF_INET6, cnxtp, 0);
+	int sox = socket (PF_INET6, cnxtp, proto);
 	if (sox == -1) {
 		fprintf (stderr, "%s: Failed to create a socket: %s\n",
 				argv [0], strerror (errno));
@@ -121,15 +119,15 @@ int main (int argc, char *argv []) {
 	}
 
 	//
-	// Handle TCP over IPv6 with listen/synergy/accept
-	if (cnxtp == SOCK_STREAM) {
+	// Handle TCP and SCTP over IPv6 with listen/synergy/accept
+	if ((cnxtp == SOCK_STREAM) || (cnxtp == SOCK_SEQPACKET)) {
 		if (listen (sox, 5) == -1) {
 			fprintf (stderr, "%s: Failed to listen to socket: %s\n",
 				argv [0], strerror (errno));
 			exit (1);
 		}
 		if (synergy (sox, hoplimit, &remot) == -1) {
-			fprintf (stderr, "%s: Failed to run synergy on TCP socket: %s\n",
+			fprintf (stderr, "%s: Failed to run synergy on SCTP or TCP socket: %s\n",
 				argv [0], strerror (errno));
 			exit (1);
 		}

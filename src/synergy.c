@@ -46,6 +46,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 
 #include <netinet/in.h>
 #include <netinet/ip6.h>
@@ -108,7 +109,6 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
 	int proto;
 	int rawsox;
 	union rawmsg rawmsg;
-	size_t rawlen;
 	socklen_t namesz = sizeof (local);
 	socklen_t typesz = sizeof (type);
 
@@ -153,7 +153,6 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
 	struct iovec io [1];
 	switch (proto) {
 	case IPPROTO_TCP:
-		rawlen = sizeof (rawmsg.tcppkt);
 		rawmsg.tcppkt.hdr.source = local.sin6_port;
 		rawmsg.tcppkt.hdr.dest   = symcli->sin6_port;
 		rawmsg.tcppkt.hdr.doff   = 5;
@@ -162,7 +161,6 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
 		io->iov_len = sizeof (rawmsg.tcppkt);
 		break;
 	case IPPROTO_UDP:
-		rawlen = sizeof (rawmsg.udppkt);
 		// TODO: Checksum not calculated by kernel?
 		rawmsg.udppkt.hdr.source = local.sin6_port;
 		rawmsg.udppkt.hdr.dest   = symcli->sin6_port;
@@ -171,19 +169,20 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
 		io->iov_len = sizeof (rawmsg.udppkt);
 		break;
 	case IPPROTO_SCTP:
-		rawlen = sizeof (rawmsg.sctppkt);
 		rawmsg.sctppkt.hdr.source = local.sin6_port;
 		rawmsg.sctppkt.hdr.dest   = symcli->sin6_port;
-		rawmsg.sctppkt.hdr.vfytag = 0;  /* Because we send INIT */
+		rawmsg.sctppkt.hdr.vfytag = 0;      /* Because we send INIT */
 		rawmsg.sctppkt.hdr.cksum  = 0;  /* Assume offload to kernel */
-		rawmsg.sctppkt.ch1.type   = 1;  /* INIT */
-		rawmsg.sctppkt.ch1.flags  = 0;  /* No flags */
-		rawmsg.sctppkt.ch1.length = htons (rawlen);
+		rawmsg.sctppkt.ch1.type   = 1;                      /* INIT */
+		rawmsg.sctppkt.ch1.flags  = 0;                  /* No flags */
+		rawmsg.sctppkt.ch1.length = htons (sizeof (rawmsg.sctppkt));
 		rawmsg.sctppkt.ch1.val.initag = 0;  /* Illegal, would ABORT */
-		rawmsg.sctppkt.ch1.val.advwin = 1024;       /* Arbitrary */
-		rawmsg.sctppkt.ch1.val.numout = htons (1);  /* Arbitrary */
-		rawmsg.sctppkt.ch1.val.numin  = htons (1);  /* Arbitrary */
-		rawmsg.sctppkt.ch1.val.initsn = 0;          /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.advwin = htons (1024);  /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.numout = htons (1);     /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.numin  = htons (1);     /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.initsn = 0;             /* Arbitrary */
+		io->iov_base = &rawmsg.sctppkt;
+		io->iov_len = sizeof (rawmsg.sctppkt);
 		break;
 	}
 
@@ -198,7 +197,7 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
 
 	struct msghdr mh;
 	mh.msg_name = &rawnm;
-	mh.msg_namelen = rawlen;
+	mh.msg_namelen = sizeof (rawnm);
 	mh.msg_iov = io;
 	mh.msg_iovlen = 1;
 	mh.msg_control = &hl;
@@ -221,7 +220,66 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
  * failure of the actual RAW send, but may yield feedback on asking the daemon.
  */
 int synergy_daemonised (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
-	"TODO:DAEMONISE";
+	//
+	// When no symcli address is provided, find it from
+	struct sockaddr_in6 remot;
+	socklen_t namesz = sizeof (remot);
+	if (symcli == NULL) {
+		if (getpeername (sockfd, (struct sockaddr *) &remot, &namesz)) {
+			return -1;
+		}
+		symcli = &remot;
+	}
+	//
+	// Construct the request
+	char anc [CMSG_SPACE (sizeof (int))];
+	struct synergy_request_message req;
+	struct iovec iov;
+	struct msghdr mgh;
+	struct cmsghdr *cmg;
+	memset (&anc, 0, sizeof (anc));
+	memset (&req, 0, sizeof (req));
+	memset (&iov, 0, sizeof (iov));
+	memset (&mgh, 0, sizeof (mgh));
+	iov.iov_len = sizeof (req);
+	iov.iov_base = &req;
+	mgh.msg_iovlen = 1;
+	mgh.msg_iov = &iov;
+	mgh.msg_controllen = sizeof (anc);
+	mgh.msg_control = &anc;
+	//
+	// Fill the request data fields
+	cmg = CMSG_FIRSTHDR (&mgh);
+	cmg->cmsg_level = SOL_SOCKET;
+	cmg->cmsg_type = SCM_RIGHTS;
+	cmg->cmsg_len = CMSG_LEN (sizeof (int));
+	* (int *) CMSG_DATA (cmg) = sockfd;
+	req.hoplimit = hoplimit;
+	memcpy (&req.symcli, symcli, sizeof (req.symcli));
+	//
+	// Send the message to the daemon
+	int sox = socket (PF_UNIX, SOCK_DGRAM, 0);
+	if (sox == -1) {
+		return -1;
+	}
+	struct sockaddr_un socket_path;
+	memset (&socket_path, 0, sizeof (socket_path));
+	socket_path.sun_family = PF_UNIX;
+	strncpy (socket_path.sun_path, SYNERGY_DAEMON_SOCKET_PATH,
+				sizeof (socket_path.sun_path));
+	if (connect (sox, (struct sockaddr *) &socket_path,
+				sizeof (socket_path)) == -1) {
+		close (sox);
+		return -1;
+	}
+	ssize_t len = sendmsg (sox, &mgh, 0);
+	close (sox);
+	if (len < 0) {
+		return -1;
+	}
+	//
+	// We finished, and it looks like we succeeded
+	return 0;
 }
 
 

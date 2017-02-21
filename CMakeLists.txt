@@ -22,6 +22,10 @@ get_version_from_git (SocketSynergy 0.0.0)
 
 enable_testing ()
 
+option (DEBUG
+	"Add debugging support while building the software"
+	OFF)
+
 
 #
 # DEPENDENCIES
@@ -33,6 +37,10 @@ enable_testing ()
 #
 
 include_directories (include)
+
+if (${DEBUG})
+	add_compile_options (-O0 -ggdb3)
+endif ()
 
 add_library (synergyShared SHARED src/synergy.c)
 
