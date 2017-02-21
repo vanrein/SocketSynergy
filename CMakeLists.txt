@@ -64,7 +64,10 @@ target_link_libraries (listendemo synergyShared)
 install (TARGETS synergyShared synergy.d
 	LIBRARY       DESTINATION lib
 	RUNTIME       DESTINATION sbin
-	PUBLIC_HEADER DESTINATION include/sys/socketsynergy.h)
+	)
+
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/sys/socketsynergy.h
+	DESTINATION include/sys)
 
 add_uninstall_target ()
 
