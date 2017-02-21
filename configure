@@ -1,9 +1,0 @@
-#!/bin/sh
-
-echo I am too old for autoconf, and/or this tool is too simple...
-
-echo Writing Makefile...
-DIR=`dirname "$0"`
-rm -f "$DIR/Makefile"
-cp "$DIR/Makefile.in" "$DIR/Makefile"
-chmod ugo-w "$DIR/Makefile"
