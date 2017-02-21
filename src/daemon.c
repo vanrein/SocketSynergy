@@ -111,6 +111,12 @@ int main (int argc, char *argv []) {
 		exit (1);
 	}
 	//
+	// Make the socket generally available
+	if (chmod (SYNERGY_DAEMON_SOCKET_PATH, S_IRWXU | S_IRWXG | S_IRWXO) == -1) {
+		perror ("Failed to make synergy socket accessible");
+		exit (1);
+	}
+	//
 	// Fork daemon process / cleanup and exit master
 	pid_t child = fork ();
 	switch (child) {

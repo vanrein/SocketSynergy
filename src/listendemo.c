@@ -131,11 +131,13 @@ int main (int argc, char *argv []) {
 				argv [0], strerror (errno));
 			exit (1);
 		}
-		sox = accept (sox, NULL, 0);
-		if (sox == -1) {
-			fprintf (stderr, "%s: Failed to accept connection from socket: %s\n",
-				argv [0], strerror (errno));
-			exit (1);
+		if (cnxtp == SOCK_STREAM) {
+			sox = accept (sox, NULL, 0);
+			if (sox == -1) {
+				fprintf (stderr, "%s: Failed to accept connection from socket: %s\n",
+					argv [0], strerror (errno));
+				exit (1);
+			}
 		}
 	}
 
