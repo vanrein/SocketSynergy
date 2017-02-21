@@ -42,6 +42,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -51,6 +52,33 @@
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
 
+
+#include <sys/socketsynergy.h>
+
+
+/* These definitions are not widely available; we define it locally to be a
+ * header with one chunk (the INIT chunk).
+ */
+struct sctpchunk_init {
+	uint8_t type;
+	uint8_t flags;
+	uint8_t length;
+	struct {
+		uint32_t initag;
+		uint32_t advwin;
+		uint16_t numout;
+		uint16_t numin;
+		uint32_t initsn;
+	} val;
+};
+struct sctphdr {
+	uint16_t source;
+	uint16_t dest;
+	uint32_t vfytag;
+	uint32_t cksum;
+};
+
+
 union rawmsg {
 	struct udpmsg {
 		struct udphdr hdr;
@@ -58,6 +86,10 @@ union rawmsg {
 	struct tcpmsg {
 		struct tcphdr hdr;
 	} tcppkt;
+	struct sctpmsg {
+		struct sctphdr hdr;
+		struct sctpchunk_init ch1;
+	} sctppkt;
 };
 
 struct hoplimiter {
@@ -66,14 +98,18 @@ struct hoplimiter {
 };
 
 
-int synergy (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
+/* The privileged version of our API call directly works on a RAW socket; this
+ * is also the version used inside the daemon.
+ */
+int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
 	struct sockaddr_in6 local, remot;
 	struct sockaddr_in6 rawnm;
 	int type;
 	int proto;
 	int rawsox;
 	union rawmsg rawmsg;
-	size_t namesz = sizeof (local);
+	size_t rawlen;
+	socklen_t namesz = sizeof (local);
 	socklen_t typesz = sizeof (type);
 
 	//
@@ -98,6 +134,8 @@ int synergy (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
 		proto = IPPROTO_TCP;
 	} else if (type == SOCK_DGRAM) {
 		proto = IPPROTO_UDP;
+	} else if (type == SOCK_SEQPACKET) {
+		proto = IPPROTO_SCTP;
 	} else {
 		errno = EBADF;
 		return -1;
@@ -113,20 +151,40 @@ int synergy (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
 	//
 	// Construct TCP or UDP header
 	struct iovec io [1];
-	if (type == SOCK_STREAM) {
+	switch (proto) {
+	case IPPROTO_TCP:
+		rawlen = sizeof (rawmsg.tcppkt);
 		rawmsg.tcppkt.hdr.source = local.sin6_port;
 		rawmsg.tcppkt.hdr.dest   = symcli->sin6_port;
 		rawmsg.tcppkt.hdr.doff   = 5;
 		rawmsg.tcppkt.hdr.syn    = 1; // Sending SYN is the main purpose
 		io->iov_base = &rawmsg.tcppkt;
 		io->iov_len = sizeof (rawmsg.tcppkt);
-	} else {
+		break;
+	case IPPROTO_UDP:
+		rawlen = sizeof (rawmsg.udppkt);
 		// TODO: Checksum not calculated by kernel?
 		rawmsg.udppkt.hdr.source = local.sin6_port;
 		rawmsg.udppkt.hdr.dest   = symcli->sin6_port;
 		rawmsg.udppkt.hdr.len    = htons (8);
 		io->iov_base = &rawmsg.udppkt;
 		io->iov_len = sizeof (rawmsg.udppkt);
+		break;
+	case IPPROTO_SCTP:
+		rawlen = sizeof (rawmsg.sctppkt);
+		rawmsg.sctppkt.hdr.source = local.sin6_port;
+		rawmsg.sctppkt.hdr.dest   = symcli->sin6_port;
+		rawmsg.sctppkt.hdr.vfytag = 0;  /* Because we send INIT */
+		rawmsg.sctppkt.hdr.cksum  = 0;  /* Assume offload to kernel */
+		rawmsg.sctppkt.ch1.type   = 1;  /* INIT */
+		rawmsg.sctppkt.ch1.flags  = 0;  /* No flags */
+		rawmsg.sctppkt.ch1.length = htons (rawlen);
+		rawmsg.sctppkt.ch1.val.initag = 0;  /* Illegal, would ABORT */
+		rawmsg.sctppkt.ch1.val.advwin = 1024;       /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.numout = htons (1);  /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.numin  = htons (1);  /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.initsn = 0;          /* Arbitrary */
+		break;
 	}
 
 	struct hoplimiter hl;
@@ -140,7 +198,7 @@ int synergy (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
 
 	struct msghdr mh;
 	mh.msg_name = &rawnm;
-	mh.msg_namelen = sizeof (rawnm);
+	mh.msg_namelen = rawlen;
 	mh.msg_iov = io;
 	mh.msg_iovlen = 1;
 	mh.msg_control = &hl;
@@ -155,5 +213,26 @@ int synergy (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
 
 	close (rawsox);
 	return 0;
+}
+
+
+/* The daemonised version of the API call will forward the request to a daemon
+ * process that runs privileged.  It will not receive feedback on success or
+ * failure of the actual RAW send, but may yield feedback on asking the daemon.
+ */
+int synergy_daemonised (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
+	"TODO:DAEMONISE";
+}
+
+
+/* The normal API call checks whether it can use the privileged version or
+ * must go through the daemon, and do precisely that.
+ */
+int synergy (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcli) {
+	if (geteuid () == 0) {
+		return synergy_privileged (sockfd, hoplimit, symcli);
+	} else {
+		return synergy_daemonised (sockfd, hoplimit, symcli);
+	}
 }
 
