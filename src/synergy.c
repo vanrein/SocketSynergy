@@ -93,10 +93,7 @@ union rawmsg {
 	} sctppkt;
 };
 
-struct hoplimiter {
-	struct cmsghdr hlcm;
-	int hoplimit;
-};
+typedef char hoplimiter [CMSG_SPACE (sizeof(int))];
 
 
 /* The privileged version of our API call directly works on a RAW socket; this
@@ -186,27 +183,30 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
 		break;
 	}
 
-	struct hoplimiter hl;
-	hl.hlcm.cmsg_level = IPPROTO_IPV6;
-	hl.hlcm.cmsg_type  = IPV6_HOPLIMIT;
-	hl.hlcm.cmsg_len   = sizeof (hl);
-	hl.hoplimit = hoplimit;
-
 	memcpy (&rawnm, symcli, sizeof (struct sockaddr_in6));
 	rawnm.sin6_port = htons (0);	/* Socket defines IPPROTO_xxx */
 
-	struct msghdr mh;
-	mh.msg_name = &rawnm;
-	mh.msg_namelen = sizeof (rawnm);
-	mh.msg_iov = io;
-	mh.msg_iovlen = 1;
-	mh.msg_control = &hl;
-	mh.msg_controllen = sizeof (hl);
-	mh.msg_flags = MSG_NOSIGNAL;
+	struct msghdr mgh;
+	hoplimiter hlm;
+	mgh.msg_name = &rawnm;
+	mgh.msg_namelen = sizeof (rawnm);
+	mgh.msg_iov = io;
+	mgh.msg_iovlen = 1;
+	mgh.msg_control = &hlm;
+	mgh.msg_controllen = sizeof (hlm);
+	mgh.msg_flags = MSG_NOSIGNAL;
+
+	memset (&hlm, 0, sizeof (hlm));
+	struct cmsghdr *cmg;
+	cmg = CMSG_FIRSTHDR (&mgh);
+	cmg->cmsg_len = CMSG_LEN (sizeof (int));
+	cmg->cmsg_level = IPPROTO_IPV6;
+	cmg->cmsg_type = IPV6_HOPLIMIT;
+	* (int *) CMSG_DATA (cmg) = hoplimit;
 
 	//
 	// Have checksums calculated by the kernel and send the message
-	if (sendmsg (rawsox, &mh, MSG_NOSIGNAL) == -1) {
+	if (sendmsg (rawsox, &mgh, MSG_NOSIGNAL) == -1) {
 		return -1;
 	}
 
