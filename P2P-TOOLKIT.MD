@@ -31,7 +31,7 @@ The p2p Toolkit consists of the following tools:
     The work modifies the message flow of TLS such that it can negotiate the
     desired independency; it also works together with classic implementations
     of TLS that insist on either the client or server role.  Symmetric TLS is
-    implemented in GnuTLS.
+    [implemented in GnuTLS](https://github.com/arpa2/gnutls-symmetry).
 
 
 ## Acknowledgements
