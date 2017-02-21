@@ -63,7 +63,7 @@
 struct sctpchunk_init {
 	uint8_t type;
 	uint8_t flags;
-	uint8_t length;
+	uint16_t length;
 	struct {
 		uint32_t initag;
 		uint32_t advwin;
@@ -172,9 +172,9 @@ int synergy_privileged (int sockfd, uint8_t hoplimit, struct sockaddr_in6 *symcl
 		rawmsg.sctppkt.hdr.cksum  = 0;  /* Assume offload to kernel */
 		rawmsg.sctppkt.ch1.type   = 1;                      /* INIT */
 		rawmsg.sctppkt.ch1.flags  = 0;                  /* No flags */
-		rawmsg.sctppkt.ch1.length = htons (sizeof (rawmsg.sctppkt));
+		rawmsg.sctppkt.ch1.length = htons (sizeof (rawmsg.sctppkt.ch1));
 		rawmsg.sctppkt.ch1.val.initag = 0;  /* Illegal, would ABORT */
-		rawmsg.sctppkt.ch1.val.advwin = htons (1024);  /* Arbitrary */
+		rawmsg.sctppkt.ch1.val.advwin = htonl (1024);  /* Arbitrary */
 		rawmsg.sctppkt.ch1.val.numout = htons (1);     /* Arbitrary */
 		rawmsg.sctppkt.ch1.val.numin  = htons (1);     /* Arbitrary */
 		rawmsg.sctppkt.ch1.val.initsn = 0;             /* Arbitrary */
