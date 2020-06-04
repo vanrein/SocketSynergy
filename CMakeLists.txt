@@ -1,3 +1,4 @@
+message(FATAL_ERROR "This repository has moved to GitLab\n\nGet socketSYNerg from\n\thttps://gitlab.com/arpa2/socketSYNergy/\n")
 #
 # CMakeLists.txt for synergy
 #
